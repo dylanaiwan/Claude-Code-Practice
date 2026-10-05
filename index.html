@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bruto-netto calculator</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Bruto-netto calculator</h1>
+      <p class="sub">Berekening op basis van de Nederlandse belastingschijven 2026</p>
+    </header>
+
+    <form id="form" class="card" autocomplete="off">
+      <label for="bruto">Brutosalaris</label>
+      <div class="input-row">
+        <span class="prefix">€</span>
+        <input id="bruto" type="number" inputmode="decimal" min="0" step="any" placeholder="3500" value="3500">
+        <select id="periode" aria-label="Periode">
+          <option value="maand" selected>per maand</option>
+          <option value="jaar">per jaar</option>
+        </select>
+      </div>
+
+      <label class="check">
+        <input id="vakantiegeld" type="checkbox" checked>
+        8% vakantiegeld bovenop het salaris
+      </label>
+      <label class="check">
+        <input id="heffingskorting" type="checkbox" checked>
+        Loonheffingskorting toepassen
+      </label>
+    </form>
+
+    <section class="card result" aria-live="polite">
+      <div class="totals">
+        <div>
+          <span class="label">Netto per maand</span>
+          <span id="nettoMaand" class="big">–</span>
+        </div>
+        <div>
+          <span class="label">Netto per jaar</span>
+          <span id="nettoJaar" class="big">–</span>
+        </div>
+      </div>
+      <p id="toelichting" class="muted"></p>
+
+      <table>
+        <tbody id="details"></tbody>
+      </table>
+    </section>
+
+    <footer class="muted">
+      Indicatieve berekening voor een werknemer onder de AOW-leeftijd. Geen rekening gehouden met
+      pensioenpremie, bijtelling, eindejaarsuitkering of andere inhoudingen. De loonheffing wordt
+      op jaarbasis berekend en gelijk over 12 maanden verdeeld; vakantiegeld wordt in deze
+      berekening meegenomen in het netto jaarbedrag. De werkelijke loonstrook kan afwijken.
+    </footer>
+  </main>
+
+  <script src="calculator.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

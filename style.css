@@ -1,0 +1,94 @@
+:root {
+  --bg: #f4f6f9;
+  --card: #ffffff;
+  --text: #1c2430;
+  --muted: #637083;
+  --accent: #e8590c;
+  --border: #dde3ea;
+  --positive: #2b8a3e;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #12161c;
+    --card: #1b2129;
+    --text: #e6eaf0;
+    --muted: #93a0b2;
+    --accent: #ff8a3d;
+    --border: #2c3440;
+    --positive: #69db7c;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+main {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 32px 16px 48px;
+}
+
+h1 { margin: 0; font-size: 1.8rem; }
+.sub { margin: 4px 0 24px; color: var(--muted); }
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+label { display: block; font-weight: 600; margin-bottom: 8px; }
+
+.input-row {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+.input-row:focus-within { border-color: var(--accent); }
+.prefix { padding: 0 4px 0 12px; color: var(--muted); }
+
+input[type="number"], select {
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  padding: 12px 8px;
+  outline: none;
+}
+input[type="number"] { flex: 1; min-width: 0; font-size: 1.25rem; }
+select { border-left: 1px solid var(--border); padding-right: 12px; }
+select option { background: var(--card); }
+
+.check { display: flex; gap: 8px; align-items: center; font-weight: 400; margin: 8px 0 0; }
+.check input { accent-color: var(--accent); width: 18px; height: 18px; }
+
+.totals { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.label { display: block; color: var(--muted); font-size: 0.9rem; }
+.big { display: block; font-size: 1.8rem; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
+
+table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 0.95rem; }
+td { padding: 6px 0; border-bottom: 1px solid var(--border); }
+td:last-child { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; padding-left: 12px; }
+tr.korting td:last-child { color: var(--positive); }
+tr.sum td { font-weight: 600; }
+tr.strong td { font-size: 1.05rem; border-bottom: 0; }
+
+.muted { color: var(--muted); font-size: 0.85rem; }
+footer { margin-top: 8px; }
+
+@media (max-width: 420px) {
+  .totals { grid-template-columns: 1fr; }
+  .big { font-size: 1.5rem; }
+}
