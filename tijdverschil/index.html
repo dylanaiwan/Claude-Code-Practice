@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="nl">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tijdverschil tussen landen</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Manrope:wght@400;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: two country panels side by side with a swap button between them, the difference as one big statement below, then a 24-hour strip comparing both days. */
+:root {
+  --bg: #edf1f3; --surface: #fbfcfd; --ink: #15212b; --muted: #5a6a77; --line: #d4dce2;
+  --accent: #0b7285; --sun: #f5c04a; --sun-ink: #3d2c00; --night: #dbe3e9; --day: #f3f6f8;
+  --display: "Unbounded", "Segoe UI", system-ui, sans-serif;
+  --body: "Manrope", system-ui, -apple-system, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f161c; --surface: #172129; --ink: #e3eaf0; --muted: #8fa1af; --line: #283642;
+  --accent: #4cc3d9; --sun: #c8901a; --sun-ink: #1a1200; --night: #0c1217; --day: #1f2c36; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0f161c; --surface: #172129; --ink: #e3eaf0; --muted: #8fa1af; --line: #283642;
+  --accent: #4cc3d9; --sun: #c8901a; --sun-ink: #1a1200; --night: #0c1217; --day: #1f2c36; color-scheme: dark }
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 var(--body); }
+main { max-width: 880px; margin: 0 auto; padding: 32px 16px 48px; display: grid; gap: 20px; }
+
+header h1 { margin: 0; font: 700 clamp(1.5rem, 4vw, 2.1rem)/1.15 var(--display); letter-spacing: -0.01em; text-wrap: balance; }
+header p { margin: 6px 0 0; color: var(--muted); max-width: 60ch; }
+
+.pair { display: grid; grid-template-columns: 1fr auto 1fr; gap: 12px; align-items: stretch; }
+.panel { min-width: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px; display: grid; gap: 10px; align-content: start; }
+.tag { font: 600 0.72rem/1 var(--body); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.panel input, .panel select, .when input {
+  width: 100%; font: 600 1rem var(--body); color: var(--ink); background: var(--bg);
+  border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px;
+}
+.panel input:focus-visible, .panel select:focus-visible, .when input:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.panel input.invalid { border-color: #c92a2a; }
+.hint { min-height: 1.2em; margin: -4px 0 0; font-size: 0.82rem; color: var(--muted); }
+.clock { font: 700 clamp(2.2rem, 7vw, 3.2rem)/1 var(--mono); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+.clock .sec { font-size: 0.45em; color: var(--muted); margin-left: 4px; }
+.meta { display: flex; flex-wrap: wrap; gap: 6px 12px; color: var(--muted); font-size: 0.9rem; }
+.chip { font: 500 0.8rem var(--mono); padding: 2px 8px; border-radius: 99px; border: 1px solid var(--line); color: var(--ink); }
+.chip.shift { border-color: var(--accent); color: var(--accent); }
+
+.swap { align-self: center; width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); color: var(--accent); font-size: 1.2rem; cursor: pointer; }
+.swap:hover { border-color: var(--accent); }
+
+.verdict { display: grid; grid-template-columns: auto 1fr; gap: 6px 24px; align-items: center; padding: 8px 4px; }
+.diff { font: 700 clamp(2.4rem, 8vw, 4rem)/1 var(--display); color: var(--accent); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.verdict p { margin: 0; font-size: 1.1rem; min-width: 0; }
+.verdict p small { display: block; color: var(--muted); font-size: 0.88rem; margin-top: 4px; }
+
+.when { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; color: var(--muted); font-size: 0.95rem; }
+.when input { width: auto; font-family: var(--mono); }
+.when button { font: 600 0.9rem var(--body); padding: 9px 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
+.when button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+
+.strip-card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px; min-width: 0; }
+.strip-card h2 { margin: 0 0 4px; font: 600 1rem var(--body); }
+.strip-card > p { margin: 0 0 12px; color: var(--muted); font-size: 0.9rem; }
+.scroll { overflow-x: auto; }
+.strip { display: grid; grid-template-columns: 6.5rem repeat(24, minmax(1.6rem, 1fr)); gap: 2px; min-width: 720px; font: 500 0.72rem var(--mono); }
+.strip .name { font: 600 0.8rem var(--body); padding: 6px 8px 6px 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; align-self: center; }
+.cell { text-align: center; padding: 7px 0; border-radius: 4px; background: var(--day); }
+.cell.night { background: var(--night); color: var(--muted); }
+.cell.work { background: var(--sun); color: var(--sun-ink); }
+.cell.now { outline: 2px solid var(--accent); outline-offset: -2px; font-weight: 700; }
+.cell.newday { box-shadow: inset 2px 0 0 var(--accent); }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 12px; color: var(--muted); font-size: 0.82rem; }
+.legend span::before { content: ""; display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; background: var(--day); border: 1px solid var(--line); }
+.legend .l-work::before { background: var(--sun); }
+.legend .l-night::before { background: var(--night); }
+.legend .l-now::before { background: transparent; border: 2px solid var(--accent); }
+
+footer { color: var(--muted); font-size: 0.82rem; }
+
+@media (max-width: 640px) {
+  .pair { grid-template-columns: 1fr; }
+  .swap { justify-self: center; transform: rotate(90deg); }
+  .verdict { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: no-preference) { .swap { transition: transform .2s; } .swap:active { transform: rotate(180deg); } }
+</style>
+
+<main>
+  <header>
+    <h1>Tijdverschil tussen landen</h1>
+    <p>Typ twee landen en zie direct hoe laat het daar is en hoeveel uur ze van elkaar verschillen. Zomer- en wintertijd worden automatisch meegenomen.</p>
+  </header>
+
+  <form class="pair" id="form" autocomplete="off">
+    <section class="panel" id="panel-a">
+      <label class="tag" for="land-a">Land 1</label>
+      <input id="land-a" list="landen" placeholder="Bijv. Nederland">
+      <select id="zone-a" aria-label="Tijdzone land 1" hidden></select>
+      <p class="hint" id="hint-a"></p>
+      <div class="clock" id="clock-a">--:--</div>
+      <div class="meta"><span id="date-a"></span><span class="chip" id="utc-a"></span></div>
+    </section>
+
+    <button type="button" class="swap" id="swap" title="Landen omwisselen" aria-label="Landen omwisselen">⇄</button>
+
+    <section class="panel" id="panel-b">
+      <label class="tag" for="land-b">Land 2</label>
+      <input id="land-b" list="landen" placeholder="Bijv. Japan">
+      <select id="zone-b" aria-label="Tijdzone land 2" hidden></select>
+      <p class="hint" id="hint-b"></p>
+      <div class="clock" id="clock-b">--:--</div>
+      <div class="meta"><span id="date-b"></span><span class="chip" id="utc-b"></span><span class="chip shift" id="shift-b" hidden></span></div>
+    </section>
+    <datalist id="landen"></datalist>
+  </form>
+
+  <section class="verdict" aria-live="polite">
+    <div class="diff" id="diff">0 u</div>
+    <p id="verdict-text"></p>
+  </section>
+
+  <div class="when">
+    <button type="button" id="btn-now" aria-pressed="true">Nu</button>
+    <label for="tijd">of reken een tijdstip om in <strong id="when-name">land 1</strong>:</label>
+    <input type="time" id="tijd">
+  </div>
+
+  <section class="strip-card">
+    <h2>Dagoverzicht</h2>
+    <p id="overlap"></p>
+    <div class="scroll"><div class="strip" id="strip"></div></div>
+    <div class="legend"><span class="l-work">Kantooruren 9–17</span><span>Dag</span><span class="l-night">Nacht 22–7</span><span class="l-now">Gekozen uur</span></div>
+  </section>
+
+  <footer>De tijden komen uit de tijdzonedatabase van je browser. Landen met meerdere tijdzones krijgen een extra keuzemenu.</footer>
+</main>
+
+<script>
+// Landcode → tijdzones. De eerste zone is de standaard (meestal de hoofdstad).
+const RAW = `AF Asia/Kabul|AL Europe/Tirane|DZ Africa/Algiers|AD Europe/Andorra|AO Africa/Luanda|AG America/Antigua|AR America/Argentina/Buenos_Aires|AM Asia/Yerevan|AW America/Aruba
+|AU Australia/Sydney Australia/Melbourne Australia/Brisbane Australia/Adelaide Australia/Darwin Australia/Perth Australia/Hobart|AT Europe/Vienna|AZ Asia/Baku
+|BS America/Nassau|BH Asia/Bahrain|BD Asia/Dhaka|BB America/Barbados|BY Europe/Minsk|BE Europe/Brussels|BZ America/Belize|BJ Africa/Porto-Novo|BT Asia/Thimphu|BO America/La_Paz
+|BQ America/Kralendijk|BA Europe/Sarajevo|BW Africa/Gaborone|BR America/Sao_Paulo America/Manaus America/Fortaleza America/Noronha America/Rio_Branco|BN Asia/Brunei|BG Europe/Sofia
+|BF Africa/Ouagadougou|BI Africa/Bujumbura|KH Asia/Phnom_Penh|CM Africa/Douala|CA America/Toronto America/Vancouver America/Edmonton America/Winnipeg America/Regina America/Halifax America/St_Johns
+|CV Atlantic/Cape_Verde|CF Africa/Bangui|TD Africa/Ndjamena|CL America/Santiago Pacific/Easter|CN Asia/Shanghai|CO America/Bogota|KM Indian/Comoro|CG Africa/Brazzaville
+|CD Africa/Kinshasa Africa/Lubumbashi|CR America/Costa_Rica|CI Africa/Abidjan|HR Europe/Zagreb|CU America/Havana|CW America/Curacao|CY Asia/Nicosia|CZ Europe/Prague|DK Europe/Copenhagen
+|DJ Africa/Djibouti|DM America/Dominica|DO America/Santo_Domingo|EC America/Guayaquil Pacific/Galapagos|EG Africa/Cairo|SV America/El_Salvador|GQ Africa/Malabo|ER Africa/Asmara
+|EE Europe/Tallinn|SZ Africa/Mbabane|ET Africa/Addis_Ababa|FJ Pacific/Fiji|FI Europe/Helsinki|FR Europe/Paris|GA Africa/Libreville|GM Africa/Banjul|GE Asia/Tbilisi|DE Europe/Berlin
+|GH Africa/Accra|GR Europe/Athens|GL America/Nuuk|GD America/Grenada|GT America/Guatemala|GN Africa/Conakry|GW Africa/Bissau|GY America/Guyana|HT America/Port-au-Prince
+|HN America/Tegucigalpa|HK Asia/Hong_Kong|HU Europe/Budapest|IS Atlantic/Reykjavik|IN Asia/Kolkata|ID Asia/Jakarta Asia/Makassar Asia/Jayapura|IR Asia/Tehran|IQ Asia/Baghdad
+|IE Europe/Dublin|IL Asia/Jerusalem|IT Europe/Rome|JM America/Jamaica|JP Asia/Tokyo|JO Asia/Amman|KZ Asia/Almaty|KE Africa/Nairobi|KI Pacific/Tarawa Pacific/Kiritimati
+|KP Asia/Pyongyang|KR Asia/Seoul|XK Europe/Belgrade|KW Asia/Kuwait|KG Asia/Bishkek|LA Asia/Vientiane|LV Europe/Riga|LB Asia/Beirut|LS Africa/Maseru|LR Africa/Monrovia
+|LY Africa/Tripoli|LI Europe/Vaduz|LT Europe/Vilnius|LU Europe/Luxembourg|MO Asia/Macau|MG Indian/Antananarivo|MW Africa/Blantyre|MY Asia/Kuala_Lumpur|MV Indian/Maldives
+|ML Africa/Bamako|MT Europe/Malta|MH Pacific/Majuro|MR Africa/Nouakchott|MU Indian/Mauritius|MX America/Mexico_City America/Cancun America/Hermosillo America/Tijuana
+|FM Pacific/Pohnpei|MD Europe/Chisinau|MC Europe/Monaco|MN Asia/Ulaanbaatar|ME Europe/Podgorica|MA Africa/Casablanca|MZ Africa/Maputo|MM Asia/Yangon|NA Africa/Windhoek
+|NR Pacific/Nauru|NP Asia/Kathmandu|NL Europe/Amsterdam|NZ Pacific/Auckland Pacific/Chatham|NI America/Managua|NE Africa/Niamey|NG Africa/Lagos|MK Europe/Skopje|NO Europe/Oslo
+|OM Asia/Muscat|PK Asia/Karachi|PW Pacific/Palau|PS Asia/Hebron|PA America/Panama|PG Pacific/Port_Moresby|PY America/Asuncion|PE America/Lima|PH Asia/Manila|PL Europe/Warsaw
+|PT Europe/Lisbon Atlantic/Azores Atlantic/Madeira|PR America/Puerto_Rico|QA Asia/Qatar|RO Europe/Bucharest
+|RU Europe/Moscow Europe/Kaliningrad Europe/Samara Asia/Yekaterinburg Asia/Omsk Asia/Novosibirsk Asia/Krasnoyarsk Asia/Irkutsk Asia/Yakutsk Asia/Vladivostok Asia/Magadan Asia/Kamchatka
+|RW Africa/Kigali|KN America/St_Kitts|LC America/St_Lucia|VC America/St_Vincent|WS Pacific/Apia|SM Europe/San_Marino|ST Africa/Sao_Tome|SA Asia/Riyadh|SN Africa/Dakar
+|RS Europe/Belgrade|SC Indian/Mahe|SL Africa/Freetown|SG Asia/Singapore|SX America/Lower_Princes|SK Europe/Bratislava|SI Europe/Ljubljana|SB Pacific/Guadalcanal|SO Africa/Mogadishu
+|ZA Africa/Johannesburg|SS Africa/Juba|ES Europe/Madrid Atlantic/Canary|LK Asia/Colombo|SD Africa/Khartoum|SR America/Paramaribo|SE Europe/Stockholm|CH Europe/Zurich|SY Asia/Damascus
+|TW Asia/Taipei|TJ Asia/Dushanbe|TZ Africa/Dar_es_Salaam|TH Asia/Bangkok|TL Asia/Dili|TG Africa/Lome|TO Pacific/Tongatapu|TT America/Port_of_Spain|TN Africa/Tunis|TR Europe/Istanbul
+|TM Asia/Ashgabat|TV Pacific/Funafuti|UG Africa/Kampala|UA Europe/Kyiv|AE Asia/Dubai|GB Europe/London
+|US America/New_York America/Chicago America/Denver America/Phoenix America/Los_Angeles America/Anchorage Pacific/Honolulu|UY America/Montevideo|UZ Asia/Tashkent|VU Pacific/Efate
+|VA Europe/Vatican|VE America/Caracas|VN Asia/Ho_Chi_Minh|YE Asia/Aden|ZM Africa/Lusaka|ZW Africa/Harare`;
+
+// Oudere browsers kennen sommige nieuwere zonenamen nog niet.
+const ALIASES = { "Europe/Kyiv": "Europe/Kiev", "America/Nuuk": "America/Godthab" };
+const isZone = (z) => { try { new Intl.DateTimeFormat("en", { timeZone: z }); return true; } catch { return false; } };
+const fixZone = (z) => (isZone(z) ? z : ALIASES[z] && isZone(ALIASES[z]) ? ALIASES[z] : null);
+
+const regionNames = new Intl.DisplayNames(["nl"], { type: "region" });
+const COUNTRIES = RAW.replace(/\s*\n\s*/g, "").split("|").map((entry) => {
+  const [code, ...zones] = entry.trim().split(" ");
+  return { code, name: regionNames.of(code), zones: zones.map(fixZone).filter(Boolean) };
+}).filter((c) => c.zones.length).sort((a, b) => a.name.localeCompare(b.name, "nl"));
+
+const byName = new Map(COUNTRIES.map((c) => [c.name.toLowerCase(), c]));
+const $ = (id) => document.getElementById(id);
+$("landen").innerHTML = COUNTRIES.map((c) => `<option value="${c.name}"></option>`).join("");
+
+// ---- Tijdzone-rekenwerk ----
+const partsFmt = {};
+function partsIn(zone, ms) {
+  partsFmt[zone] ??= new Intl.DateTimeFormat("en-US", { timeZone: zone, hourCycle: "h23",
+    year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" });
+  const p = {};
+  for (const { type, value } of partsFmt[zone].formatToParts(new Date(ms))) p[type] = +value;
+  return p;
+}
+// Verschil met UTC in minuten op een bepaald moment.
+function offsetMin(zone, ms) {
+  const t = Math.floor(ms / 1000) * 1000;
+  const p = partsIn(zone, t);
+  return Math.round((Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second) - t) / 60000);
+}
+// Moment (ms) waarop het in `zone` een bepaalde lokale datum en tijd is.
+function instantAt(zone, y, mo, d, h, mi) {
+  const guess = Date.UTC(y, mo - 1, d, h, mi);
+  let t = guess - offsetMin(zone, guess) * 60000;
+  return guess - offsetMin(zone, t) * 60000;
+}
+const fmtOffset = (m) => {
+  const s = m < 0 ? "−" : "+", a = Math.abs(m);
+  return `UTC${s}${Math.floor(a / 60)}${a % 60 ? ":" + String(a % 60).padStart(2, "0") : ""}`;
+};
+const fmtDuration = (m) => {
+  const h = Math.floor(m / 60), mi = m % 60;
+  return [h ? `${h} uur` : "", mi ? `${mi} minuten` : ""].filter(Boolean).join(" en ");
+};
+const pad = (n) => String(n).padStart(2, "0");
+const city = (zone) => zone.split("/").pop().replace(/_/g, " ");
+const dateFmt = {};
+const longDate = (zone, ms) => (dateFmt[zone] ??= new Intl.DateTimeFormat("nl-NL",
+  { timeZone: zone, weekday: "long", day: "numeric", month: "long" })).format(ms);
+
+// ---- Status ----
+const state = { a: { country: byName.get("nederland"), zone: null }, b: { country: COUNTRIES.find((c) => c.code === "JP"), zone: null }, time: null };
+state.a.zone = state.a.country.zones[0];
+state.b.zone = state.b.country.zones[0];
+try {
+  const saved = JSON.parse(localStorage.getItem("tijdverschil") || "null");
+  for (const k of ["a", "b"]) {
+    const c = saved && COUNTRIES.find((x) => x.code === saved[k]?.code);
+    if (c) state[k] = { country: c, zone: c.zones.includes(saved[k].zone) ? saved[k].zone : c.zones[0] };
+  }
+} catch {}
+const save = () => { try { localStorage.setItem("tijdverschil", JSON.stringify({
+  a: { code: state.a.country.code, zone: state.a.zone }, b: { code: state.b.country.code, zone: state.b.zone } })); } catch {} };
+
+const placeName = (s) => s.country.zones.length > 1 ? `${s.country.name} (${city(s.zone)})` : s.country.name;
+
+function fillSide(k) {
+  const s = state[k];
+  $(`land-${k}`).value = s.country.name;
+  $(`land-${k}`).classList.remove("invalid");
+  $(`hint-${k}`).textContent = s.country.zones.length > 1 ? `${s.country.zones.length} tijdzones, kies hieronder een plaats.` : "";
+  const sel = $(`zone-${k}`);
+  sel.hidden = s.country.zones.length < 2;
+  const now = Date.now();
+  sel.innerHTML = s.country.zones.map((z) => `<option value="${z}">${city(z)} · ${fmtOffset(offsetMin(z, now))}</option>`).join("");
+  sel.value = s.zone;
+}
+
+function findCountry(text, exactOnly) {
+  const q = text.trim().toLowerCase();
+  if (!q) return null;
+  if (byName.has(q)) return byName.get(q);
+  if (exactOnly) return null;
+  return COUNTRIES.find((c) => c.name.toLowerCase().startsWith(q)) || COUNTRIES.find((c) => c.name.toLowerCase().includes(q)) || null;
+}
+
+for (const k of ["a", "b"]) {
+  const input = $(`land-${k}`);
+  input.addEventListener("input", () => {
+    const c = findCountry(input.value, true);
+    if (c) { state[k] = { country: c, zone: c.zones[0] }; fillSide(k); save(); render(); }
+  });
+  input.addEventListener("change", () => {
+    const c = findCountry(input.value, false);
+    if (c) { state[k] = { country: c, zone: c.zones[0] }; fillSide(k); save(); render(); }
+    else { input.classList.add("invalid"); $(`hint-${k}`).textContent = `"${input.value}" niet gevonden. Probeer de Nederlandse naam, bijv. Duitsland.`; }
+  });
+  input.addEventListener("focus", () => input.select());
+  $(`zone-${k}`).addEventListener("change", (e) => { state[k].zone = e.target.value; save(); render(); });
+}
+$("form").addEventListener("submit", (e) => { e.preventDefault(); document.activeElement.blur(); });
+
+$("swap").addEventListener("click", () => {
+  [state.a, state.b] = [state.b, state.a];
+  if (state.time) state.time = null, $("tijd").value = "";
+  fillSide("a"); fillSide("b"); save(); render();
+});
+$("tijd").addEventListener("input", (e) => { state.time = e.target.value || null; render(); });
+$("btn-now").addEventListener("click", () => { state.time = null; $("tijd").value = ""; render(); });
+
+// ---- Weergave ----
+function render() {
+  const A = state.a, B = state.b;
+  let ms = Date.now();
+  if (state.time) {
+    const p = partsIn(A.zone, ms);
+    const [h, mi] = state.time.split(":").map(Number);
+    ms = instantAt(A.zone, p.year, p.month, p.day, h, mi);
+  }
+  $("btn-now").setAttribute("aria-pressed", String(!state.time));
+  $("when-name").textContent = placeName(A);
+
+  const offA = offsetMin(A.zone, ms), offB = offsetMin(B.zone, ms);
+  const pA = partsIn(A.zone, ms), pB = partsIn(B.zone, ms);
+  for (const [k, p, s, off] of [["a", pA, A, offA], ["b", pB, B, offB]]) {
+    $(`clock-${k}`).innerHTML = `${pad(p.hour)}:${pad(p.minute)}` + (state.time ? "" : `<span class="sec">${pad(p.second)}</span>`);
+    $(`date-${k}`).textContent = longDate(s.zone, ms);
+    $(`utc-${k}`).textContent = fmtOffset(off);
+  }
+  const dayShift = Math.round((Date.UTC(pB.year, pB.month - 1, pB.day) - Date.UTC(pA.year, pA.month - 1, pA.day)) / 864e5);
+  $("shift-b").hidden = !dayShift;
+  $("shift-b").textContent = dayShift > 0 ? "dag later" : "dag eerder";
+
+  const diff = offB - offA;
+  const sign = diff > 0 ? "+" : diff < 0 ? "−" : "";
+  const abs = Math.abs(diff);
+  $("diff").textContent = `${sign}${Math.floor(abs / 60)}${abs % 60 ? ":" + pad(abs % 60) : ""} u`;
+  const nA = placeName(A), nB = placeName(B);
+  $("verdict-text").innerHTML = diff === 0
+    ? `${nB} en ${nA} hebben dezelfde tijd.<small>Er is geen tijdsverschil op dit moment.</small>`
+    : `${nB} loopt <strong>${fmtDuration(abs)}</strong> ${diff > 0 ? "voor op" : "achter op"} ${nA}.` +
+      `<small>Als het in ${nA} 12:00 is, is het in ${nB} ${shiftClock(12 * 60 + diff)}.</small>`;
+
+  renderStrip(ms, pA, offA);
+}
+function shiftClock(min) {
+  const day = Math.floor(min / 1440), m = ((min % 1440) + 1440) % 1440;
+  return `${pad(Math.floor(m / 60))}:${pad(m % 60)}` + (day > 0 ? " (de volgende dag)" : day < 0 ? " (de vorige dag)" : "");
+}
+
+function renderStrip(ms, pA, offA) {
+  const A = state.a, B = state.b;
+  const start = instantAt(A.zone, pA.year, pA.month, pA.day, 0, 0);
+  const work = (h) => h >= 9 && h < 17, night = (h) => h >= 22 || h < 7;
+  const rowA = [], rowB = [], overlap = [];
+  let prevDay = null;
+  for (let i = 0; i < 24; i++) {
+    const t = start + i * 36e5;
+    const a = partsIn(A.zone, t), b = partsIn(B.zone, t);
+    const cls = (h) => (work(h) ? " work" : night(h) ? " night" : "");
+    const isNow = a.hour === pA.hour;
+    rowA.push(`<div class="cell${cls(a.hour)}${isNow ? " now" : ""}">${pad(a.hour)}</div>`);
+    const newDay = prevDay !== null && b.day !== prevDay;
+    prevDay = b.day;
+    rowB.push(`<div class="cell${cls(b.hour)}${isNow ? " now" : ""}${newDay ? " newday" : ""}" title="${longDate(B.zone, t)}">${pad(b.hour)}${b.minute ? ":" + pad(b.minute) : ""}</div>`);
+    if (work(a.hour) && work(b.hour) && (!b.minute || work(b.hour + 1))) overlap.push(a.hour);
+  }
+  $("strip").innerHTML =
+    `<div class="name" title="${placeName(A)}">${placeName(A)}</div>${rowA.join("")}` +
+    `<div class="name" title="${placeName(B)}">${placeName(B)}</div>${rowB.join("")}`;
+  $("overlap").textContent = overlap.length
+    ? `Kantooruren overlappen ${overlap.length} uur: van ${pad(overlap[0])}:00 tot ${pad(overlap.at(-1) + 1)}:00 in ${placeName(A)}.`
+    : `Kantooruren (9–17 uur) overlappen niet. Goed om te weten als je wilt bellen of vergaderen.`;
+}
+
+fillSide("a"); fillSide("b"); render();
+// Op smalle schermen het gekozen uur in beeld schuiven.
+const nowCell = document.querySelector("#strip .cell.now");
+if (nowCell) { const sc = document.querySelector(".scroll"); sc.scrollLeft = nowCell.offsetLeft - sc.offsetLeft - sc.clientWidth / 2; }
+setInterval(() => { if (!state.time) render(); }, 1000);
+</script>
